@@ -49,11 +49,11 @@ static int choldc1(double * a, double * p, int n) {
     return 0; /* success */
 }
 
-static int choldcsl(double * A, double * a, double * p, int n) 
+static int choldcsl(double * A, double * a, double * p, int n)
 {
     int i,j,k; double sum;
-    for (i = 0; i < n; i++) 
-        for (j = 0; j < n; j++) 
+    for (i = 0; i < n; i++)
+        for (j = 0; j < n; j++)
             a[i*n+j] = A[i*n+j];
     if (choldc1(a, p, n)) return 1;
     for (i = 0; i < n; i++) {
@@ -71,7 +71,7 @@ static int choldcsl(double * A, double * a, double * p, int n)
 }
 
 
-static int cholsl(double * A, double * a, double * p, int n) 
+static int cholsl(double * A, double * a, double * p, int n)
 {
     int i,j,k;
     if (choldcsl(A,a,p,n)) return 1;
@@ -158,7 +158,7 @@ static void transpose(double * a, double * at, int m, int n)
 
 /* A <- A + B */
 static void accum(double * a, double * b, int m, int n)
-{        
+{
     int i,j;
 
     for(i=0; i<m; ++i)
@@ -186,7 +186,7 @@ static void sub(double * a, double * b, double * c, int n)
 }
 
 static void negate(double * a, int m, int n)
-{        
+{
     int i, j;
 
     for(i=0; i<m; ++i)
@@ -205,91 +205,8 @@ static void mat_addeye(double * a, int n)
 
 #include "tiny_ekf.h"
 
-// typedef struct {
-//     int n;
-//     int m;
-
-//     double * x;    /* state vector */
-
-//     double * P;  /* prediction error covariance */
-//     double * Q;  /* process noise covariance */
-//     double * R;  /* measurement error covariance */
-
-//     double * G;  /* Kalman gain; a.k.a. K */
-
-//     double * F;  /* Jacobian of process model */
-//     double * H;  /* Jacobian of measurement model */
-
-//     double * Ht;  transpose of measurement Jacobian 
-//     double * Ft; /* transpose of process Jacobian */
-//     double * Pp; /* P, post-prediction, pre-update */
-
-//     double * fx;  /* output of user defined f() state-transition function */
-//     double * hx;  /* output of user defined h() measurement function */
-
-//     /* temporary storage */
-//     double * tmp1;
-//     double * tmp2;
-//     double * tmp3;
-//     double * tmp4;
-//     double * tmp5; 
-
-// } ekf_t;
-
-// static void unpack(void * v, ekf_t * ekf, int n, int m)
-// {
-//     /* skip over n, m in data structure */
-//     char * cptr = (char *)v;
-//     cptr += 2*sizeof(int);
-
-//     double * dptr = (double *)cptr;
-//     ekf->x = dptr;
-//     dptr += n;
-//     ekf->P = dptr;
-//     dptr += n*n;
-//     ekf->Q = dptr;
-//     dptr += n*n;
-//     ekf->R = dptr;
-//     dptr += m*m;
-//     ekf->G = dptr;
-//     dptr += n*m;
-//     ekf->F = dptr;
-//     dptr += n*n;
-//     ekf->H = dptr;
-//     dptr += m*n;
-//     ekf->Ht = dptr;
-//     dptr += n*m;
-//     ekf->Ft = dptr;
-//     dptr += n*n;
-//     ekf->Pp = dptr;
-//     dptr += n*n;
-//     ekf->fx = dptr;
-//     dptr += n;
-//     ekf->hx = dptr;
-//     dptr += m;
-//     ekf->tmp1 = dptr;
-//     dptr += n*m;
-//     ekf->tmp2 = dptr;
-//     dptr += m*n;
-//     ekf->tmp3 = dptr;
-//     dptr += m*m;
-//     ekf->tmp4 = dptr;
-//     dptr += m*m;
-//     ekf->tmp5 = dptr;
-//   }
-
 void ekf_init(ekf_t& ekf)
 {
-    // /* retrieve n, m and set them in incoming data structure */
-    // int * ptr = (int *)v;
-    // *ptr = n;
-    // ptr++;
-    // *ptr = m;
-
-    // /* unpack rest of incoming structure for initlization */
-    // ekf_t ekf;
-    // unpack(v, &ekf, n, m);
-
     /* zero-out matrices */
     zeros(ekf.P, ekf.n, ekf.n);
     zeros(ekf.Q, ekf.n, ekf.n);
@@ -300,17 +217,7 @@ void ekf_init(ekf_t& ekf)
 }
 
 int ekf_step(ekf_t& ekf, double z[])
-{        
-    // /* unpack incoming structure */
-
-    // int * ptr = (int *)v;
-    // int n = *ptr;
-    // ptr++;
-    // int m = *ptr;
-
-    // ekf_t ekf;
-    // unpack(v, &ekf, n, m); 
- 
+{
     /* P_k = F_{k-1} P_{k-1} F^T_{k-1} + Q_{k-1} */
     mulmat(ekf.F, ekf.P, ekf.tmp1, ekf.n, ekf.n, ekf.n);
     transpose(ekf.F, ekf.Ft, ekf.n, ekf.n);
@@ -323,7 +230,8 @@ int ekf_step(ekf_t& ekf, double z[])
     mulmat(ekf.H, ekf.Pp, ekf.tmp2, ekf.m, ekf.n, ekf.n);
     mulmat(ekf.tmp2, ekf.Ht, ekf.tmp3, ekf.m, ekf.n, ekf.m);
     accum(ekf.tmp3, ekf.R, ekf.m, ekf.m);
-    if (cholsl(ekf.tmp3, ekf.tmp4, ekf.tmp5, ekf.m)) return 1;
+    if (cholsl(ekf.tmp3, ekf.tmp4, ekf.tmp5, ekf.m))
+        return 1;
     mulmat(ekf.tmp1, ekf.tmp4, ekf.G, ekf.n, ekf.m, ekf.m);
 
     /* \hat{x}_k = \hat{x_k} + G_k(z_k - h(\hat{x}_k */
