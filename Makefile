@@ -1,6 +1,6 @@
 # Makefile for maintaining TinyEKF
 #
-# Copyright (C) 2015 Simon D. Levy
+# Copyright (C) 2015 Simon D. Levy, (C) 2016 Juuk, Inc.
 #
 # This code is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License as 
@@ -15,12 +15,15 @@
 # You should have received a copy of the GNU Lesser General Public License 
 # along with this code.  If not, see <http://www.gnu.org/licenses/>.
 
+O := .
+
+all: $(O)/libTinyEKF.so
+
+$(O)/libTinyEKF.so: tiny_ekf.c tiny_ekf.h Makefile
+	$(CXX) $(CFLAGS) -fPIC -shared -o $@ $<
 doc:
 	doxygen
 
 clean:
+	rm $(O)/libTinyEKF.so
 	rm -rf Documentation
-
-commit:
-	git commit -a --allow-empty-message -m ''
-	git push

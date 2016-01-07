@@ -205,135 +205,137 @@ static void mat_addeye(double * a, int n)
 
 #include "tiny_ekf.h"
 
-typedef struct {
+// typedef struct {
+//     int n;
+//     int m;
 
-    double * x;    /* state vector */
+//     double * x;    /* state vector */
 
-    double * P;  /* prediction error covariance */
-    double * Q;  /* process noise covariance */
-    double * R;  /* measurement error covariance */
+//     double * P;  /* prediction error covariance */
+//     double * Q;  /* process noise covariance */
+//     double * R;  /* measurement error covariance */
 
-    double * G;  /* Kalman gain; a.k.a. K */
+//     double * G;  /* Kalman gain; a.k.a. K */
 
-    double * F;  /* Jacobian of process model */
-    double * H;  /* Jacobian of measurement model */
+//     double * F;  /* Jacobian of process model */
+//     double * H;  /* Jacobian of measurement model */
 
-    double * Ht; /* transpose of measurement Jacobian */
-    double * Ft; /* transpose of process Jacobian */
-    double * Pp; /* P, post-prediction, pre-update */
+//     double * Ht;  transpose of measurement Jacobian 
+//     double * Ft; /* transpose of process Jacobian */
+//     double * Pp; /* P, post-prediction, pre-update */
 
-    double * fx;  /* output of user defined f() state-transition function */
-    double * hx;  /* output of user defined h() measurement function */
+//     double * fx;  /* output of user defined f() state-transition function */
+//     double * hx;  /* output of user defined h() measurement function */
 
-    /* temporary storage */
-    double * tmp1;
-    double * tmp2;
-    double * tmp3;
-    double * tmp4;
-    double * tmp5; 
+//     /* temporary storage */
+//     double * tmp1;
+//     double * tmp2;
+//     double * tmp3;
+//     double * tmp4;
+//     double * tmp5; 
 
-} ekf_t;
+// } ekf_t;
 
-static void unpack(void * v, ekf_t * ekf, int n, int m)
+// static void unpack(void * v, ekf_t * ekf, int n, int m)
+// {
+//     /* skip over n, m in data structure */
+//     char * cptr = (char *)v;
+//     cptr += 2*sizeof(int);
+
+//     double * dptr = (double *)cptr;
+//     ekf->x = dptr;
+//     dptr += n;
+//     ekf->P = dptr;
+//     dptr += n*n;
+//     ekf->Q = dptr;
+//     dptr += n*n;
+//     ekf->R = dptr;
+//     dptr += m*m;
+//     ekf->G = dptr;
+//     dptr += n*m;
+//     ekf->F = dptr;
+//     dptr += n*n;
+//     ekf->H = dptr;
+//     dptr += m*n;
+//     ekf->Ht = dptr;
+//     dptr += n*m;
+//     ekf->Ft = dptr;
+//     dptr += n*n;
+//     ekf->Pp = dptr;
+//     dptr += n*n;
+//     ekf->fx = dptr;
+//     dptr += n;
+//     ekf->hx = dptr;
+//     dptr += m;
+//     ekf->tmp1 = dptr;
+//     dptr += n*m;
+//     ekf->tmp2 = dptr;
+//     dptr += m*n;
+//     ekf->tmp3 = dptr;
+//     dptr += m*m;
+//     ekf->tmp4 = dptr;
+//     dptr += m*m;
+//     ekf->tmp5 = dptr;
+//   }
+
+void ekf_init(ekf_t& ekf)
 {
-    /* skip over n, m in data structure */
-    char * cptr = (char *)v;
-    cptr += 2*sizeof(int);
+    // /* retrieve n, m and set them in incoming data structure */
+    // int * ptr = (int *)v;
+    // *ptr = n;
+    // ptr++;
+    // *ptr = m;
 
-    double * dptr = (double *)cptr;
-    ekf->x = dptr;
-    dptr += n;
-    ekf->P = dptr;
-    dptr += n*n;
-    ekf->Q = dptr;
-    dptr += n*n;
-    ekf->R = dptr;
-    dptr += m*m;
-    ekf->G = dptr;
-    dptr += n*m;
-    ekf->F = dptr;
-    dptr += n*n;
-    ekf->H = dptr;
-    dptr += m*n;
-    ekf->Ht = dptr;
-    dptr += n*m;
-    ekf->Ft = dptr;
-    dptr += n*n;
-    ekf->Pp = dptr;
-    dptr += n*n;
-    ekf->fx = dptr;
-    dptr += n;
-    ekf->hx = dptr;
-    dptr += m;
-    ekf->tmp1 = dptr;
-    dptr += n*m;
-    ekf->tmp2 = dptr;
-    dptr += m*n;
-    ekf->tmp3 = dptr;
-    dptr += m*m;
-    ekf->tmp4 = dptr;
-    dptr += m*m;
-    ekf->tmp5 = dptr;
-  }
-
-void ekf_init(void * v, int n, int m)
-{
-    /* retrieve n, m and set them in incoming data structure */
-    int * ptr = (int *)v;
-    *ptr = n;
-    ptr++;
-    *ptr = m;
-
-    /* unpack rest of incoming structure for initlization */
-    ekf_t ekf;
-    unpack(v, &ekf, n, m);
+    // /* unpack rest of incoming structure for initlization */
+    // ekf_t ekf;
+    // unpack(v, &ekf, n, m);
 
     /* zero-out matrices */
-    zeros(ekf.P, n, n);
-    zeros(ekf.Q, n, n);
-    zeros(ekf.R, m, m);
-    zeros(ekf.G, n, m);
-    zeros(ekf.F, n, n);
-    zeros(ekf.H, m, n);
+    zeros(ekf.P, ekf.n, ekf.n);
+    zeros(ekf.Q, ekf.n, ekf.n);
+    zeros(ekf.R, ekf.m, ekf.m);
+    zeros(ekf.G, ekf.n, ekf.m);
+    zeros(ekf.F, ekf.n, ekf.n);
+    zeros(ekf.H, ekf.m, ekf.n);
 }
 
-int ekf_step(void * v, double * z)
+int ekf_step(ekf_t& ekf, double z[])
 {        
-    /* unpack incoming structure */
+    // /* unpack incoming structure */
 
-    int * ptr = (int *)v;
-    int n = *ptr;
-    ptr++;
-    int m = *ptr;
+    // int * ptr = (int *)v;
+    // int n = *ptr;
+    // ptr++;
+    // int m = *ptr;
 
-    ekf_t ekf;
-    unpack(v, &ekf, n, m); 
+    // ekf_t ekf;
+    // unpack(v, &ekf, n, m); 
  
     /* P_k = F_{k-1} P_{k-1} F^T_{k-1} + Q_{k-1} */
-    mulmat(ekf.F, ekf.P, ekf.tmp1, n, n, n);
-    transpose(ekf.F, ekf.Ft, n, n);
-    mulmat(ekf.tmp1, ekf.Ft, ekf.Pp, n, n, n);
-    accum(ekf.Pp, ekf.Q, n, n);
+    mulmat(ekf.F, ekf.P, ekf.tmp1, ekf.n, ekf.n, ekf.n);
+    transpose(ekf.F, ekf.Ft, ekf.n, ekf.n);
+    mulmat(ekf.tmp1, ekf.Ft, ekf.Pp, ekf.n, ekf.n, ekf.n);
+    accum(ekf.Pp, ekf.Q, ekf.n, ekf.n);
 
     /* G_k = P_k H^T_k (H_k P_k H^T_k + R)^{-1} */
-    transpose(ekf.H, ekf.Ht, m, n);
-    mulmat(ekf.Pp, ekf.Ht, ekf.tmp1, n, n, m);
-    mulmat(ekf.H, ekf.Pp, ekf.tmp2, m, n, n);
-    mulmat(ekf.tmp2, ekf.Ht, ekf.tmp3, m, n, m);
-    accum(ekf.tmp3, ekf.R, m, m);
-    if (cholsl(ekf.tmp3, ekf.tmp4, ekf.tmp5, m)) return 1;
-    mulmat(ekf.tmp1, ekf.tmp4, ekf.G, n, m, m);
+    transpose(ekf.H, ekf.Ht, ekf.m, ekf.n);
+    mulmat(ekf.Pp, ekf.Ht, ekf.tmp1, ekf.n, ekf.n, ekf.m);
+    mulmat(ekf.H, ekf.Pp, ekf.tmp2, ekf.m, ekf.n, ekf.n);
+    mulmat(ekf.tmp2, ekf.Ht, ekf.tmp3, ekf.m, ekf.n, ekf.m);
+    accum(ekf.tmp3, ekf.R, ekf.m, ekf.m);
+    if (cholsl(ekf.tmp3, ekf.tmp4, ekf.tmp5, ekf.m)) return 1;
+    mulmat(ekf.tmp1, ekf.tmp4, ekf.G, ekf.n, ekf.m, ekf.m);
 
     /* \hat{x}_k = \hat{x_k} + G_k(z_k - h(\hat{x}_k */
-    sub(z, ekf.hx, ekf.tmp5, m);
-    mulvec(ekf.G, ekf.tmp5, ekf.tmp2, n, m);
-    add(ekf.fx, ekf.tmp2, ekf.x, n);
+    sub(z, ekf.hx, ekf.tmp5, ekf.m);
+    mulvec(ekf.G, ekf.tmp5, ekf.tmp2, ekf.n, ekf.m);
+    add(ekf.fx, ekf.tmp2, ekf.x, ekf.n);
 
     /* P_k = (I - G_k H_k) P_k */
-    mulmat(ekf.G, ekf.H, ekf.tmp1, n, m, n);
-    negate(ekf.tmp1, n, n);
-    mat_addeye(ekf.tmp1, n);
-    mulmat(ekf.tmp1, ekf.Pp, ekf.P, n, n, n);
+    mulmat(ekf.G, ekf.H, ekf.tmp1, ekf.n, ekf.m, ekf.n);
+    negate(ekf.tmp1, ekf.n, ekf.n);
+    mat_addeye(ekf.tmp1, ekf.n);
+    mulmat(ekf.tmp1, ekf.Pp, ekf.P, ekf.n, ekf.n, ekf.n);
 
     /* success */
     return 0;

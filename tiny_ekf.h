@@ -56,7 +56,40 @@
         double tmp5[M]; 
     * </pre>
   */
-void ekf_init(void * ekf, int n, int m);
+
+typedef struct {
+    int n;
+    int m;
+
+    double * x;    /* state vector */
+
+    double * P;  /* prediction error covariance */
+    double * Q;  /* process noise covariance */
+    double * R;  /* measurement error covariance */
+
+    double * G;  /* Kalman gain; a.k.a. K */
+
+    double * F;  /* Jacobian of process model */
+    double * H;  /* Jacobian of measurement model */
+
+    double * Ht; /* transpose of measurement Jacobian */
+    double * Ft; /* transpose of process Jacobian */
+    double * Pp; /* P, post-prediction, pre-update */
+
+    double * fx;  /* output of user defined f() state-transition function */
+    double * hx;  /* output of user defined h() measurement function */
+
+    /* temporary storage */
+    double * tmp1;
+    double * tmp2;
+    double * tmp3;
+    double * tmp4;
+    double * tmp5; 
+
+} ekf_t;
+
+
+void ekf_init(ekf_t&);
 
 /**
   * Runs one step of EKF prediction and update. Your code should first build a model, setting
@@ -65,4 +98,4 @@ void ekf_init(void * ekf, int n, int m);
   * @param z array of measurement (observation) values
   * @return 0 on success, 1 on failure caused by non-positive-definite matrix.
   */
-int ekf_step(void * ekf, double * z);
+int ekf_step(ekf_t&, double[]);
